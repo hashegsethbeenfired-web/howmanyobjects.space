@@ -45,50 +45,40 @@ export default function ExploreSection() {
 
   const pageSize = 50;
 
-  /* ── Fetch: preview (featured + recent active satellites) ── */
+  /* ── Fetch: preview (Featured specific objects only) ── */
   useEffect(() => {
     async function loadPreview() {
       try {
-        const cutoff = get15YearsAgo();
-        // 1. Fetch recent
-        const recentReq = fetch(
-          `/api/objects?type=active_satellite&launchedAfter=${cutoff}&sortBy=launch_desc&page=1&pageSize=5`
-        ).then((r) => r.json());
-
-        // 2. Fetch specific featured objects: ISS (25544) and Shenzhou 21
+        // Fetch specific featured objects: ISS (25544) and Tiangong Space Station (48274)
         const issReq = fetch(`/api/objects?search=25544`).then((r) => r.json());
-        const shenzhouReq = fetch(`/api/objects?search=shenzhou 21`).then((r) => r.json());
+        const tiangongReq = fetch(`/api/objects?search=48274`).then((r) => r.json());
 
-        const [recentData, issData, shenzhouData] = await Promise.all([
-          recentReq,
+        const [issData, tiangongData] = await Promise.all([
           issReq,
-          shenzhouReq,
+          tiangongReq,
         ]);
 
         const combined: OrbitalObject[] = [];
 
-        // Add ISS if found
+        // Add ISS if found, and format its name as requested
         if (issData.objects && issData.objects.length > 0) {
-          combined.push(issData.objects[0]);
+          const issObj = issData.objects[0];
+          combined.push({
+            ...issObj,
+            name: issObj.name.replace(" (ZARYA)", ""),
+          });
         }
 
-        // Add Shenzhou 21 if found
-        if (shenzhouData.objects && shenzhouData.objects.length > 0) {
-          combined.push(shenzhouData.objects[0]);
+        // Add Tiangong Space Station
+        if (tiangongData.objects && tiangongData.objects.length > 0) {
+          const tiangongObj = tiangongData.objects[0];
+          combined.push({
+            ...tiangongObj,
+            name: "Tiangong Space Station",
+          });
         }
 
-        // Add recent, avoiding duplicates
-        const existingIds = new Set(combined.map((o) => o.id));
-        if (recentData.objects) {
-          for (const obj of recentData.objects) {
-            if (!existingIds.has(obj.id)) {
-              combined.push(obj);
-              existingIds.add(obj.id);
-            }
-          }
-        }
-
-        setPreviewObjects(combined.slice(0, 7)); // Show up to 7
+        setPreviewObjects(combined);
       } catch {
         // Silently fail — user can still expand
       } finally {
