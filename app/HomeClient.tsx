@@ -133,6 +133,18 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         <p>
           Built with wonder. Not affiliated with any government agency.
         </p>
+        <p style={{ marginTop: "var(--space-2)" }}>
+          Made by{" "}
+          <a
+            href="https://www.instagram.com/yasir._jama/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer__link"
+            style={{ fontWeight: 500 }}
+          >
+            me
+          </a>
+        </p>
         <p style={{ marginTop: "var(--space-4)", opacity: 0.5 }}>
           howmanyobjects.space © {new Date().getFullYear()}
         </p>
