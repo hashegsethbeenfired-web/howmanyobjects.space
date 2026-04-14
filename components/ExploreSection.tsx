@@ -45,23 +45,50 @@ export default function ExploreSection() {
 
   const pageSize = 50;
 
-  /* ── Fetch: preview (5 recent active satellites) ── */
+  /* ── Fetch: preview (featured + recent active satellites) ── */
   useEffect(() => {
     async function loadPreview() {
       try {
         const cutoff = get15YearsAgo();
-        const params = new URLSearchParams({
-          type: "active_satellite",
-          launchedAfter: cutoff,
-          sortBy: "launch_desc",
-          page: "1",
-          pageSize: "5",
-        });
-        const res = await fetch(`/api/objects?${params.toString()}`);
-        if (res.ok) {
-          const data = await res.json();
-          setPreviewObjects(data.objects);
+        // 1. Fetch recent
+        const recentReq = fetch(
+          `/api/objects?type=active_satellite&launchedAfter=${cutoff}&sortBy=launch_desc&page=1&pageSize=5`
+        ).then((r) => r.json());
+
+        // 2. Fetch specific featured objects: ISS (25544) and Shenzhou 21
+        const issReq = fetch(`/api/objects?search=25544`).then((r) => r.json());
+        const shenzhouReq = fetch(`/api/objects?search=shenzhou 21`).then((r) => r.json());
+
+        const [recentData, issData, shenzhouData] = await Promise.all([
+          recentReq,
+          issReq,
+          shenzhouReq,
+        ]);
+
+        const combined: OrbitalObject[] = [];
+
+        // Add ISS if found
+        if (issData.objects && issData.objects.length > 0) {
+          combined.push(issData.objects[0]);
         }
+
+        // Add Shenzhou 21 if found
+        if (shenzhouData.objects && shenzhouData.objects.length > 0) {
+          combined.push(shenzhouData.objects[0]);
+        }
+
+        // Add recent, avoiding duplicates
+        const existingIds = new Set(combined.map((o) => o.id));
+        if (recentData.objects) {
+          for (const obj of recentData.objects) {
+            if (!existingIds.has(obj.id)) {
+              combined.push(obj);
+              existingIds.add(obj.id);
+            }
+          }
+        }
+
+        setPreviewObjects(combined.slice(0, 7)); // Show up to 7
       } catch {
         // Silently fail — user can still expand
       } finally {
@@ -170,7 +197,7 @@ export default function ExploreSection() {
           <p className="section__subtitle">
             {expanded
               ? `Search and filter ${formatNumber(total)} tracked objects`
-              : "Recently launched active satellites"}
+              : "Featured and recently launched active satellites"}
           </p>
         </ScrollReveal>
 
