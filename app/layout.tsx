@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : "https://howmanyobjects.space"
+      : "https://howmanyobjects.vercel.app"
   ),
   title: "How Many Objects Are Orbiting Earth Right Now? | HowManyObjects.space",
   description:
