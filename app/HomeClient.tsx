@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
-import type { CountsResponse } from "@/lib/types";
+import type { CountsResponse, OrbitalObject } from "@/lib/types";
+import type { SnapshotObject } from "@/components/EarthVisualization";
 import HeroCount from "@/components/HeroCount";
 import DataStatus from "@/components/DataStatus";
 import CategoryBreakdown from "@/components/CategoryBreakdown";
@@ -10,8 +11,10 @@ import ExploreSection from "@/components/ExploreSection";
 import EducationalSection from "@/components/EducationalSection";
 import ShareActions from "@/components/ShareActions";
 import ScrollReveal from "@/components/ScrollReveal";
+import ObjectDrawer from "@/components/ObjectDrawer";
 
-// Dynamic import for Three.js to avoid SSR issues
+// Dynamic import for Three.js to avoid SSR issues. Kept in its own chunk
+// so the hero globe doesn't block first paint.
 const EarthVisualization = dynamic(
   () => import("@/components/EarthVisualization"),
   {
@@ -35,10 +38,28 @@ interface HomeClientProps {
   initialCounts: CountsResponse | null;
 }
 
+function snapshotToOrbital(s: SnapshotObject): OrbitalObject {
+  return {
+    id: s.id,
+    catalogNumber: s.id,
+    name: s.name,
+    objectType: s.objectType,
+    orbitRegion: s.orbitRegion,
+    launchDate: s.launchDate,
+    apogeeKm: s.apogeeKm,
+    perigeeKm: s.perigeeKm,
+    inclinationDeg: s.inclinationDeg,
+  };
+}
+
 export default function HomeClient({ initialCounts }: HomeClientProps) {
   const [counts, setCounts] = useState<CountsResponse | null>(initialCounts);
+  const [selectedObject, setSelectedObject] = useState<OrbitalObject | null>(
+    null
+  );
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Refresh counts periodically (every 5 minutes)
+  // Refresh counts periodically
   const refreshCounts = useCallback(async () => {
     try {
       const res = await fetch("/api/counts");
@@ -52,12 +73,13 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
   }, []);
 
   useEffect(() => {
-    // Refresh counts on focus (when user comes back to tab)
+    // Refresh on tab focus
     const handleFocus = () => refreshCounts();
     window.addEventListener("focus", handleFocus);
 
-    // Periodic refresh every 2 minutes for near real-time updates
-    const interval = setInterval(refreshCounts, 2 * 60 * 1000);
+    // Periodic refresh every 5 minutes (was 2m — counts change slowly;
+    // less polling = less bandwidth + fewer wakeups on mobile)
+    const interval = setInterval(refreshCounts, 5 * 60 * 1000);
 
     return () => {
       window.removeEventListener("focus", handleFocus);
@@ -65,11 +87,46 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
     };
   }, [refreshCounts]);
 
+  const handleParticleSelect = useCallback((snap: SnapshotObject) => {
+    setSelectedObject(snapshotToOrbital(snap));
+    setDrawerOpen(true);
+  }, []);
+
+  // If we have the full drawer payload in the catalog, swap it in so the
+  // user gets operator/launch-site fields after opening. Fire-and-forget.
+  useEffect(() => {
+    if (!drawerOpen || !selectedObject) return;
+    let cancelled = false;
+    fetch(
+      `/api/object/${encodeURIComponent(selectedObject.catalogNumber)}`
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: OrbitalObject | null) => {
+        if (cancelled || !data || !data.catalogNumber) return;
+        setSelectedObject((prev) =>
+          prev && prev.catalogNumber === data.catalogNumber ? data : prev
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [drawerOpen, selectedObject]);
+
+  const heroInstructions = useMemo(
+    () =>
+      "Hover objects in the cloud to read their names, click to see orbital details.",
+    []
+  );
+
   return (
     <>
       {/* ── Hero Section ── */}
       <section className="hero" id="hero">
-        <EarthVisualization counts={counts} />
+        <EarthVisualization
+          counts={counts}
+          onSelect={handleParticleSelect}
+        />
 
         <HeroCount
           targetCount={counts?.totalCount || 0}
@@ -84,6 +141,10 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
             />
           )}
         </div>
+
+        <p className="hero__interact-hint" aria-live="polite">
+          {heroInstructions}
+        </p>
 
         <div className="hero__scroll-hint" aria-hidden="true">
           <span>Explore</span>
@@ -149,6 +210,13 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
           howmanyobjects.space © {new Date().getFullYear()}
         </p>
       </footer>
+
+      {/* Drawer — shared with ExploreSection's drawer semantics */}
+      <ObjectDrawer
+        object={selectedObject}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
     </>
   );
 }

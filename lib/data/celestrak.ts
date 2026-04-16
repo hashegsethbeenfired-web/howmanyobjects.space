@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { RawSatcatRecord, OrbitalObject, CountsResponse } from "@/lib/types";
 import { normalizeAll } from "./normalize";
 import {
@@ -7,6 +8,7 @@ import {
   markCacheStale,
 } from "./cache";
 import { FALLBACK_COUNTS, FALLBACK_OBJECTS } from "./fallback";
+import { CELESTRAK_CONFIG } from "@/lib/constants";
 
 /**
  * Parse CSV text into an array of records.
@@ -79,12 +81,12 @@ function parseCSVLine(line: string): string[] {
  * This is the full catalog: payloads, rocket bodies, debris, and unknown.
  */
 async function fetchFullSatcat(): Promise<RawSatcatRecord[]> {
-  const url = "https://celestrak.org/pub/satcat.csv";
+  const url = CELESTRAK_CONFIG.SATCAT_URL;
 
   const response = await fetch(url, {
-    // Don't use Next.js data cache — response is large.
-    // We manage our own in-memory cache instead.
-    cache: "no-store",
+    // Next.js 16 data cache — the full CSV is shared across invocations for 2h.
+    // Before, `cache: "no-store"` made every cold start re-download ~10MB.
+    next: { revalidate: CELESTRAK_CONFIG.CACHE_TTL_MS / 1000, tags: ["satcat"] },
     headers: {
       "User-Agent": "HowManyObjects.space/1.0 (educational-project)",
     },
@@ -99,19 +101,27 @@ async function fetchFullSatcat(): Promise<RawSatcatRecord[]> {
 }
 
 /**
- * Main data fetch — tries CelesTrak, falls back to cache, then to static seed
+ * Main data fetch — tries CelesTrak, falls back to cache, then to static seed.
+ *
+ * Intentionally NOT wrapped in unstable_cache: the parsed catalog is
+ * ~10.8MB serialized, which exceeds Vercel's 2MB per-entry data cache
+ * limit. Instead we cache the small derived outputs (counts, snapshot)
+ * that actually fit.
  */
 export async function getOrbitalData(): Promise<{
   objects: OrbitalObject[];
   counts: CountsResponse;
 }> {
-  // 1. Check cache first
+  // 1. In-process (per-invocation) memory cache — cheapest path.
+  //    This matters because counts + snapshot both call into here.
   const cached = getCachedData();
   if (cached) {
     return { objects: cached.objects, counts: cached.counts };
   }
 
-  // 2. Try fetching fresh data from CelesTrak
+  // 2. Fetch fresh data from CelesTrak (the fetch itself is data-cached
+  //    via `next: { revalidate }`, so repeat CelesTrak downloads inside
+  //    the same window are free even across invocations).
   try {
     const rawRecords = await fetchFullSatcat();
     const objects = normalizeAll(rawRecords);
@@ -125,7 +135,7 @@ export async function getOrbitalData(): Promise<{
   } catch (error) {
     console.error("Failed to fetch from CelesTrak:", error);
 
-    // 3. Try stale cache
+    // 3. Try stale in-process cache
     const stale = getStaleCachedData();
     if (stale) {
       markCacheStale();
@@ -140,6 +150,110 @@ export async function getOrbitalData(): Promise<{
     };
   }
 }
+
+/**
+ * Counts-only accessor — fits comfortably under the 2MB data-cache limit
+ * (~3KB), so we can memoize it across invocations via unstable_cache.
+ * This is what /api/counts and the home page hero hit on every render.
+ */
+export const getOrbitalCounts = unstable_cache(
+  async (): Promise<CountsResponse> => {
+    const { counts } = await getOrbitalData();
+    return counts;
+  },
+  ["orbital-counts-v1"],
+  {
+    revalidate: CELESTRAK_CONFIG.CACHE_TTL_MS / 1000,
+    tags: ["orbital-data"],
+  }
+);
+
+type SnapshotPayload = Array<{
+  id: string;
+  name: string;
+  objectType: OrbitalObject["objectType"];
+  orbitRegion: OrbitalObject["orbitRegion"];
+  apogeeKm?: number;
+  perigeeKm?: number;
+  inclinationDeg?: number;
+  launchDate?: string;
+}>;
+
+/**
+ * Build a lightweight, evenly-sampled snapshot of the catalog for the
+ * 3D hero scene. Small enough (~200KB) to cache in Next's data cache
+ * and ship to clients. Giving every particle a real NORAD identity is
+ * what makes click interactivity meaningful.
+ */
+export const getOrbitalSnapshot = unstable_cache(
+  async (maxItems = 600): Promise<SnapshotPayload> => {
+    const { objects } = await getOrbitalData();
+
+    // Keep only orbit-classified objects so every particle has a region.
+    const orbital = objects.filter((o) => o.orbitRegion !== "unknown");
+
+    // Quota per (region × type) pair so the visualization feels balanced,
+    // not 90% LEO debris (which is statistically true but visually noisy).
+    const quota = {
+      LEO: {
+        active_satellite: 180,
+        inactive_satellite: 40,
+        rocket_body: 40,
+        debris: 80,
+      },
+      MEO: {
+        active_satellite: 30,
+        inactive_satellite: 8,
+        rocket_body: 8,
+        debris: 10,
+      },
+      GEO: {
+        active_satellite: 40,
+        inactive_satellite: 20,
+        rocket_body: 10,
+        debris: 20,
+      },
+      HEO: {
+        active_satellite: 20,
+        inactive_satellite: 10,
+        rocket_body: 10,
+        debris: 20,
+      },
+    } as const;
+
+    const seen = new Map<string, number>();
+    const picked: OrbitalObject[] = [];
+    for (const obj of orbital) {
+      if (picked.length >= maxItems) break;
+      const region = obj.orbitRegion as keyof typeof quota;
+      if (!(region in quota)) continue;
+      const type = obj.objectType as keyof (typeof quota)[typeof region];
+      const cap = quota[region]?.[type];
+      if (cap == null) continue;
+      const key = `${region}:${type}`;
+      const count = seen.get(key) ?? 0;
+      if (count >= cap) continue;
+      seen.set(key, count + 1);
+      picked.push(obj);
+    }
+
+    return picked.map((o) => ({
+      id: o.catalogNumber,
+      name: o.name,
+      objectType: o.objectType,
+      orbitRegion: o.orbitRegion,
+      apogeeKm: o.apogeeKm,
+      perigeeKm: o.perigeeKm,
+      inclinationDeg: o.inclinationDeg,
+      launchDate: o.launchDate,
+    }));
+  },
+  ["orbital-snapshot-v1"],
+  {
+    revalidate: CELESTRAK_CONFIG.CACHE_TTL_MS / 1000,
+    tags: ["orbital-data"],
+  }
+);
 
 /**
  * Get a single object by catalog number
