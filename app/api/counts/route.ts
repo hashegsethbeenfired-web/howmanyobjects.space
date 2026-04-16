@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrbitalData } from "@/lib/data/celestrak";
+import { getOrbitalCounts } from "@/lib/data/celestrak";
 import { isAllowed } from "@/lib/rateLimit";
 
 export const revalidate = 7200; // 2 hours
@@ -14,10 +14,13 @@ export async function GET(request: NextRequest) {
     );
   }
   try {
-    const { counts } = await getOrbitalData();
+    const counts = await getOrbitalCounts();
     return NextResponse.json(counts, {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        // Long-ish CDN cache; revalidation rolls forward every 5m.
+        // Fresh data appears site-wide within ~5m without blocking users.
+        "Cache-Control":
+          "public, s-maxage=300, stale-while-revalidate=7200",
       },
     });
   } catch (error) {
