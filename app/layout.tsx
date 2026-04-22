@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 // Ship only the weights used in globals.css — dropping 400 saves one
@@ -81,6 +82,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <main id="main-content">{children}</main>
+        <Analytics />
       </body>
     </html>
   );
