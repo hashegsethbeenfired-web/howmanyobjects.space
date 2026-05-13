@@ -9,6 +9,7 @@ import CategoryBreakdown from "@/components/CategoryBreakdown";
 import ExploreSection from "@/components/ExploreSection";
 import EducationalSection from "@/components/EducationalSection";
 import ShareActions from "@/components/ShareActions";
+import SiteFooter from "@/components/SiteFooter";
 import ScrollReveal from "@/components/ScrollReveal";
 
 // Dynamic import for Three.js to avoid SSR issues. Kept in its own chunk
@@ -119,38 +120,7 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
       </ScrollReveal>
 
       {/* ── Footer ── */}
-      <footer className="footer">
-        <p>
-          Data sourced from{" "}
-          <a
-            href="https://celestrak.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer__link"
-          >
-            CelesTrak
-          </a>{" "}
-          / 18th Space Defense Squadron
-        </p>
-        <p>
-          Built with wonder. Not affiliated with any government agency.
-        </p>
-        <p style={{ marginTop: "var(--space-2)" }}>
-          Made by{" "}
-          <a
-            href="https://www.instagram.com/yasir._jama/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer__link"
-            style={{ fontWeight: 500 }}
-          >
-            me
-          </a>
-        </p>
-        <p style={{ marginTop: "var(--space-4)", opacity: 0.5 }}>
-          howmanyobjects.space © {new Date().getFullYear()}
-        </p>
-      </footer>
+      <SiteFooter />
 
     </>
   );
