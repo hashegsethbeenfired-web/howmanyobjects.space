@@ -3,20 +3,16 @@ import ScrollReveal from "./ScrollReveal";
 export default function EducationalSection() {
   return (
     <section className="educational" id="learn" aria-labelledby="learn-title">
-      <ScrollReveal>
-        <div className="educational__block">
-          <h2
-            className="educational__heading"
-            id="learn-title"
-            style={{ fontSize: "var(--text-3xl)", textAlign: "center", marginBottom: "var(--space-12)" }}
-          >
+      <ScrollReveal className="educational__intro">
+        <div className="educational__block educational__block--intro">
+          <h2 className="educational__heading educational__heading--intro" id="learn-title">
             Understanding the numbers
           </h2>
         </div>
       </ScrollReveal>
 
       <ScrollReveal delay={100}>
-        <div className="educational__block">
+        <div className="educational__block educational__block--count">
           <h3 className="educational__heading">What counts?</h3>
           <p className="educational__text">
             The count includes every human-made object in Earth orbit that is
@@ -34,7 +30,7 @@ export default function EducationalSection() {
       </ScrollReveal>
 
       <ScrollReveal delay={200}>
-        <div className="educational__block">
+        <div className="educational__block educational__block--velocity">
           <h3 className="educational__heading">Why space debris matters</h3>
           <p className="educational__text">
             At orbital velocities, even a 1 cm paint flake carries the kinetic
@@ -54,7 +50,7 @@ export default function EducationalSection() {
       </ScrollReveal>
 
       <ScrollReveal delay={300}>
-        <div className="educational__block">
+        <div className="educational__block educational__block--measure">
           <h3 className="educational__heading">How the count is measured</h3>
           <p className="educational__text">
             Orbital objects are tracked by the U.S. Space Force&apos;s 18th
@@ -87,7 +83,7 @@ export default function EducationalSection() {
       </ScrollReveal>
 
       <ScrollReveal delay={400}>
-        <div className="educational__block">
+        <div className="educational__block educational__block--limits">
           <h3 className="educational__heading">Limitations</h3>
           <p className="educational__text">
             This count represents publicly tracked, cataloged objects only. Some

@@ -192,7 +192,7 @@ export default function ExploreSection() {
         </ScrollReveal>
 
         <ScrollReveal delay={100}>
-          <div className="explore">
+          <div className={`explore ${expanded ? "explore--expanded" : "explore--preview"}`}>
             {/* ── PREVIEW MODE: 5 recent active satellites ── */}
             {!expanded && (
               <>
@@ -275,7 +275,20 @@ export default function ExploreSection() {
                         onClick={clearSearch}
                         aria-label="Clear search"
                       >
-                        ✕
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 16 16"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M4 4l8 8M12 4l-8 8"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
                       </button>
                     )}
                   </div>
@@ -362,7 +375,22 @@ export default function ExploreSection() {
                           disabled={page <= 1}
                           aria-label="Previous page"
                         >
-                          ← Previous
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M10 3.5L5.5 8L10 12.5"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          Previous
                         </button>
                         <span className="pagination__info">
                           Page {page} of {totalPages}
@@ -373,7 +401,22 @@ export default function ExploreSection() {
                           disabled={page >= totalPages}
                           aria-label="Next page"
                         >
-                          Next →
+                          Next
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M6 3.5L10.5 8L6 12.5"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
                         </button>
                       </div>
                     )}

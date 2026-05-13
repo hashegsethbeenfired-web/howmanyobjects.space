@@ -96,31 +96,42 @@ export default function HomeClient({ initialCounts }: HomeClientProps) {
         </div>
       </section>
 
-      {/* ── Divider ── */}
-      <div className="divider" />
+      <div className="orbital-story">
+        <div className="orbital-story__field" aria-hidden="true">
+          <span className="orbital-story__ring orbital-story__ring--one" />
+          <span className="orbital-story__ring orbital-story__ring--two" />
+          <span className="orbital-story__ring orbital-story__ring--three" />
+          <span className="orbital-story__signal orbital-story__signal--one" />
+          <span className="orbital-story__signal orbital-story__signal--two" />
+          <span className="orbital-story__signal orbital-story__signal--three" />
+        </div>
 
-      {/* ── Category Breakdown ── */}
-      <CategoryBreakdown counts={counts} />
+        {/* ── Divider ── */}
+        <div className="divider divider--entry" />
 
-      {/* ── Divider ── */}
-      <div className="divider" />
+        {/* ── Category Breakdown ── */}
+        <CategoryBreakdown counts={counts} />
 
-      {/* ── Explore Section ── */}
-      <ExploreSection />
+        {/* ── Divider ── */}
+        <div className="divider" />
 
-      {/* ── Divider ── */}
-      <div className="divider" />
+        {/* ── Explore Section ── */}
+        <ExploreSection />
 
-      {/* ── Educational Section ── */}
-      <EducationalSection />
+        {/* ── Divider ── */}
+        <div className="divider" />
 
-      {/* ── Share Actions ── */}
-      <ScrollReveal>
-        <ShareActions totalCount={counts?.totalCount || 0} />
-      </ScrollReveal>
+        {/* ── Educational Section ── */}
+        <EducationalSection />
 
-      {/* ── Footer ── */}
-      <SiteFooter />
+        {/* ── Share Actions ── */}
+        <ScrollReveal>
+          <ShareActions totalCount={counts?.totalCount || 0} />
+        </ScrollReveal>
+
+        {/* ── Footer ── */}
+        <SiteFooter />
+      </div>
 
     </>
   );

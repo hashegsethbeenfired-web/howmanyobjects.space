@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { formatNumber } from "@/lib/utils";
 import { TYPE_LABELS, TYPE_COLORS, REGION_LABELS, REGION_COLORS } from "@/lib/constants";
 import type { CountsResponse, ObjectType, OrbitRegion } from "@/lib/types";
@@ -60,12 +60,9 @@ export default function CategoryBreakdown({ counts }: CategoryBreakdownProps) {
             return (
               <ScrollReveal key={type} delay={i * 100}>
                 <div
-                  className="breakdown__item"
+                  className={`breakdown__item breakdown__item--${type}`}
                   role="listitem"
-                  style={{
-                    borderLeftColor: TYPE_COLORS[type],
-                    borderLeftWidth: "3px",
-                  }}
+                  style={{ "--item-color": TYPE_COLORS[type] } as CSSProperties}
                 >
                   <div className="breakdown__item-header">
                     <span className="breakdown__item-label">
@@ -108,7 +105,10 @@ export default function CategoryBreakdown({ counts }: CategoryBreakdownProps) {
         <div className="regions">
           {regionEntries.map(([region, count], i) => (
             <ScrollReveal key={region} delay={i * 80}>
-              <div className="regions__item">
+              <div
+                className={`regions__item regions__item--${region.toLowerCase()}`}
+                style={{ "--region-color": REGION_COLORS[region] } as CSSProperties}
+              >
                 <span
                   className={`regions__dot regions__dot--${region.toLowerCase()}`}
                 />
